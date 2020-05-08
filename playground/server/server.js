@@ -21,6 +21,15 @@ app.post('/tobes',(req,res) =>{
 
 });
 
+app.get('/tobes', (req,res) =>{
+    Tobe.find().then((tobes) =>
+    {
+        res.send({tobes});
+    },(e) => {
+        res.status(400).send(e);
+    })
+});
+
 app.listen(3000, () =>{
     console.log('started on port 3000');
 });
