@@ -43,7 +43,7 @@ return res.status(400).send();
     Tobe.findById(id).then((Tobe) => {
  if(!Tobe){
 
-    res.status((400).send);
+    res.status((400).send());
  }
   res.send({Tobe});
          
@@ -51,6 +51,23 @@ return res.status(400).send();
         res.status(400).send();
     });
 });
+
+app.delete('/tobes/:id',(req,res) => {
+    var id= req.params.id;
+
+    if(!ObjectID.isValid(id)){
+        return res.status(400).send();
+    }
+    Tobe.findByIdAndRemove(id).then((tobe) =>{
+        if(!tobe){
+          return  res.status(400).send();
+        }
+        res.send(tobe)
+
+    }).catch((e) =>{
+        res.status(400).send();
+    })
+})
 
 
 
