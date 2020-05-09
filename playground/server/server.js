@@ -1,6 +1,8 @@
-var express =require('express');
-var bodyparser = require('body-parser');
-var {ObjectID} = require('mongodb');
+const _ = require('lodash');
+
+const express =require('express');
+const bodyparser = require('body-parser');
+const {ObjectID} = require('mongodb');
 
 var {mongoose} = require('./db/mongoose.js');
 var {Tobe} = require('./models/tobe');
@@ -66,10 +68,34 @@ app.delete('/tobes/:id',(req,res) => {
 
     }).catch((e) =>{
         res.status(400).send();
-    })
-})
+    });
+});
 
+app.patch('/tobes/:id', (req,res) => {
+     var id =req.params.id;
+    //  var id =req.params.id;
+    var body = _.pick(req.body, ['text','completed']);
 
+    if(!ObjectID.isValid(id)){
+        return res.status(400).send();
+    }
+    if(_.isBoolean(body.completed) && body.completed){
+        body.completedAt = new Date().getTime();
+
+     } else{
+         body.completed = false;
+         body.completedAt = null;
+     }
+
+     Tobe.findByIdAndUpdate(id, {$set: body},{ new : true}).then((tobe) =>{
+         if(!tobe){
+             return res.status(400).send();
+         }
+         res.send({tobe});
+     }).catch((e) => {
+         res.status(400).send();
+     })
+});
 
 
 app.listen(port, () =>{
