@@ -1,12 +1,13 @@
 const _ = require('lodash');
 
-const express =require('express');
+const express = require('express');
 const bodyparser = require('body-parser');
-const {ObjectID} = require('mongodb');
+const { ObjectID } = require('mongodb');
 
-var {mongoose} = require('./db/mongoose.js');
-var {Tobe} = require('./models/tobe');
-var {User} =require('./models/user');
+var { mongoose } = require('./db/mongoose.js');
+var { Tobe } = require('./models/tobe');
+var { User } = require('./models/user');
+var {authenticate} = require('./middleware/authenticate')
 
 const port = process.env.port || 3000;
 
@@ -14,111 +15,117 @@ var app = express();
 
 app.use(bodyparser.json());
 
-app.post('/tobes',(req,res) =>{
+app.post('/tobes', (req, res) => {
     var tobe = new Tobe({
-        text :req.body.text
+        text: req.body.text
     });
-    tobe.save().then((doc) =>{
+    tobe.save().then((doc) => {
         res.send(doc);
-    },(e) =>{
+    }, (e) => {
         res.status(400).send(e);
     });
 
 });
 
-app.get('/tobes', (req,res) =>{
-    Tobe.find().then((tobes) =>
-    {
-        res.send({tobes});
-    },(e) => {
+app.get('/tobes', (req, res) => {
+    Tobe.find().then((tobes) => {
+        res.send({ tobes });
+    }, (e) => {
         res.status(400).send(e);
     })
 });
 
-app.get('/tobes/:id',(req,res) =>{
+app.get('/tobes/:id', (req, res) => {
     // res.send(req.params);
-    var id =req.params.id;
+    var id = req.params.id;
 
-    if(!ObjectID.isValid(id)){
-return res.status(400).send();
+    if (!ObjectID.isValid(id)) {
+        return res.status(400).send();
     }
     Tobe.findById(id).then((Tobe) => {
- if(!Tobe){
+        if (!Tobe) {
 
-    res.status((400).send());
- }
-  res.send({Tobe});
-         
+            res.status((400).send());
+        }
+        res.send({ Tobe });
+
     }).catch((e) => {
         res.status(400).send();
     });
 });
 
-app.delete('/tobes/:id',(req,res) => {
-    var id= req.params.id;
+app.delete('/tobes/:id', (req, res) => {
+    var id = req.params.id;
 
-    if(!ObjectID.isValid(id)){
+    if (!ObjectID.isValid(id)) {
         return res.status(400).send();
     }
-    Tobe.findByIdAndRemove(id).then((tobe) =>{
-        if(!tobe){
-          return  res.status(400).send();
+    Tobe.findByIdAndRemove(id).then((tobe) => {
+        if (!tobe) {
+            return res.status(400).send();
         }
         res.send(tobe)
 
-    }).catch((e) =>{
+    }).catch((e) => {
         res.status(400).send();
     });
 });
 
-app.patch('/tobes/:id', (req,res) => {
-     var id =req.params.id;
+app.patch('/tobes/:id', (req, res) => {
+    var id = req.params.id;
     //  var id =req.params.id;
-    var body = _.pick(req.body, ['text','completed']);
+    var body = _.pick(req.body, ['text', 'completed']);
 
-    if(!ObjectID.isValid(id)){
+    if (!ObjectID.isValid(id)) {
         return res.status(400).send();
     }
-    if(_.isBoolean(body.completed) && body.completed){
+    if (_.isBoolean(body.completed) && body.completed) {
         body.completedAt = new Date().getTime();
 
-     } else{
-         body.completed = false;
-         body.completedAt = null;
-     }
+    } else {
+        body.completed = false;
+        body.completedAt = null;
+    }
 
-     Tobe.findByIdAndUpdate(id, {$set: body},{ new : true}).then((tobe) =>{
-         if(!tobe){
-             return res.status(400).send();
-         }
-         res.send({tobe});
-     }).catch((e) => {
-         res.status(400).send();
-     })
+    Tobe.findByIdAndUpdate(id, { $set: body }, { new: true }).then((tobe) => {
+        if (!tobe) {
+            return res.status(400).send();
+        }
+        res.send({ tobe });
+    }).catch((e) => {
+        res.status(400).send();
+    })
 });
 
 
 // user modell
 
-app.post('/users',(req,res) =>{
-    var body=_.pick(req.body, ['email', 'password']);
-    var user=new User(body);
+app.post('/users', (req, res) => {
+    var body = _.pick(req.body, ['email', 'password']);
+    var user = new User(body);
 
-    user.save().then(()=>{
+    user.save().then(() => {
 
-       return user.generateAuthToken();
+        return user.generateAuthToken();
         // res.send(user);
-    }).then((token) =>{
-        res.header('X-auth').send(user); 
+    }).then((token) => {
+        res.header('x-auth', token).send(user);
 
-    }).catch((e) =>{
+    }).catch((e) => {
         res.status(400).send(e);
     })
 })
 
+//user GET metode with security auth
 
 
-app.listen(port, () =>{
+
+app.get('/users/me', authenticate, (req, res) => {
+    res.send(req.user);
+});
+
+
+app.listen(port, () => {
     console.log(`started on port ${port}`);
 });
 
